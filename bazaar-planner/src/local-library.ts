@@ -283,7 +283,7 @@ function validRelativeImagePath(filePath: string): boolean {
  */
 export function matchLocalImagePath(
   filePath: string,
-  items: Pick<CatalogItem, "id" | "source">[],
+  items: (Pick<CatalogItem, "id" | "source"> & { image?: CatalogItem["image"] })[],
   manifest?: Readonly<Record<string, string>>,
 ): ImagePathMatch {
   if (!validRelativeImagePath(filePath))
@@ -300,7 +300,9 @@ export function matchLocalImagePath(
   const candidates = items.filter((item) =>
     manifestHasPath
       ? item.id === manifest![filePath]
-      : item.id === stem || item.source.id === stem,
+      : item.image && "localId" in item.image
+        ? item.image.localId === stem
+        : item.id === stem || item.source.id === stem,
   );
   const unique = [
     ...new Map(candidates.map((item) => [item.id, item])).values(),

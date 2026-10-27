@@ -31,3 +31,6 @@ cards_generated.json
 local-data/
 private-data/
 images-private/
+
+# Local Python caches
+__pycache__/

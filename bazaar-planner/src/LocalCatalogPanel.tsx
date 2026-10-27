@@ -7,6 +7,7 @@ import {
   FileJson,
   ArrowDownToLine,
 } from "lucide-react";
+import { importImageZip, type ImageReport } from "./image-import";
 import { catalog } from "./catalog";
 import {
   loadLocalLibrary,
@@ -36,6 +37,22 @@ const issueLabels: Record<string, string> = {
   "record-key-too-long": "항목 이름 키가 너무 김",
 };
 export function LocalCatalogPanel({ onLibraryChange, onMessage }: Props) {
+  const imagePicker = useRef<HTMLInputElement>(null);
+  const [imageProgress, setImageProgress] = useState('');
+  const [imageReport, setImageReport] = useState<ImageReport | null>(null);
+  async function selectImages(file?: File) {
+    if (!file || !library) return;
+    setBusy(true); setImageReport(null);
+    try {
+      const estimate = await navigator.storage?.estimate();
+      if (estimate?.quota && estimate.quota - (estimate.usage || 0) < file.size * 1.2) throw Error('브라우저 저장 공간이 부족합니다. 공간을 확보한 뒤 다시 시도하세요.');
+      await navigator.storage?.persist?.().catch(() => false);
+      const report = await importImageZip(file, library.items, setImageProgress);
+      setImageReport(report);
+      setImageProgress(`매칭·저장 ${report.matched} / 실패 ${report.failed} / 이미지 없는 아이템 ${report.missingItemIds.length}`);
+    } catch(e) { setImageProgress(e instanceof Error ? e.message : '이미지 가져오기 실패'); }
+    finally {setBusy(false);if(imagePicker.current) imagePicker.current.value='';}
+  }
   const [library, setLibrary] = useState<LocalLibrary | null>(null);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -361,11 +378,14 @@ export function LocalCatalogPanel({ onLibraryChange, onMessage }: Props) {
             )}
             <div className="future-images">
               <strong>이미지 파일 연결</strong>
-              <p>
-                현재는 대체 아이콘을 표시합니다. 향후 로컬 ZIP의 파일명 또는
-                매핑표를 아이템 고유 ID에 연결할 수 있도록 별도 저장 구조를
-                준비했습니다. ZIP 불러오기 화면은 아직 지원하지 않습니다.
-              </p>
+              <p>먼저 Chronicle 변환 JSON을 적용한 뒤 items.zip을 선택하세요. UUID가 정확히 일치하는 WebP만 이 브라우저에 저장합니다. 분할 ZIP도 차례로 가져올 수 있습니다. 브라우저 데이터 삭제·저장 공간 회수 시 다시 가져와야 합니다.</p>
+              <button disabled={busy || !library || !!pending} onClick={() => imagePicker.current?.click()}>개인 이미지 ZIP 불러오기</button>
+              <input hidden ref={imagePicker} data-testid="image-import" type="file" accept=".zip,application/zip" onChange={e=>void selectImages(e.target.files?.[0])} />
+              <p role="status">{imageProgress}</p>
+              {imageReport && <button onClick={() => {
+                const url=URL.createObjectURL(new Blob([JSON.stringify(imageReport,null,2)],{type:'application/json'}));
+                const a=document.createElement('a');a.href=url;a.download='bazaar-image-report.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+              }}>이미지 매칭 보고서 저장</button>}
             </div>
           </section>
         </div>

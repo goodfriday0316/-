@@ -107,3 +107,11 @@ test("invalid catalog and image reject before opening a browser store", async ()
     (error) => error.code === "INVALID_DATA",
   );
 });
+test('Chronicle matching requires an explicitly verified image UUID; null does not fall back to source ID', () => {
+  const image = {path:null,sourceUrl:null,status:'missing' as const,localId:null as string|null};
+  const local = [{...items[0],image}];
+  assert.equal(matchLocalImagePath('synthetic-id-a.webp',local).status,'unmatched');
+  image.localId='verified-image';
+  assert.equal(matchLocalImagePath('synthetic-id-a.webp',local).status,'unmatched');
+  assert.equal(matchLocalImagePath('verified-image.webp',local).status,'matched');
+});

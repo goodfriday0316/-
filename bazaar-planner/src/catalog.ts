@@ -15,12 +15,15 @@ export type CatalogItem = {
     >
   >;
   image: {
+    localId?: string | null;
     path: string | null;
     sourceUrl: string | null;
     status: "available" | "missing" | "unlicensed";
   };
   source: { url: string; patchVersion: string; id: string };
   local?: {
+    metadataOnly?: boolean;
+    chronicleIgnored?: boolean;
     activity: "uncertain" | "source-declared-active";
     warnings: string[];
     unresolvedByTier: Partial<Record<TierKey, string[]>>;

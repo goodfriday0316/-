@@ -71,7 +71,7 @@ import {
 } from "./model";
 import { matchesHero, tierKeys } from "./catalog";
 import { LocalCatalogPanel } from "./LocalCatalogPanel";
-import type { LocalLibrary } from "./local-library";
+import { getLocalImage, type LocalLibrary } from "./local-library";
 import "./style.css";
 const icons: Record<string, typeof Anchor> = {
   sword: Swords,
@@ -92,16 +92,34 @@ const icons: Record<string, typeof Anchor> = {
 };
 function Art({ item }: { item: Item }) {
   const Icon = icons[item.icon] || Gem;
+  const [localUrl, setLocalUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    let current: string | null = null;
+    let revision = 0;
+    async function load() {
+      const request = ++revision;
+      const image = await getLocalImage(item.id).catch(() => null);
+      if (cancelled || request !== revision) return;
+      if (current) URL.revokeObjectURL(current);
+      current = image?.sourceId === item.source.id ? URL.createObjectURL(image.blob) : null;
+      setLocalUrl(current);
+    }
+    void load();
+    window.addEventListener('bazaar-local-images-changed', load);
+    return () => { cancelled = true; if(current) URL.revokeObjectURL(current); window.removeEventListener('bazaar-local-images-changed', load); };
+  }, [item.id, item.source.id]);
+  const artPath = localUrl || item.image.path;
   const [failedPath, setFailedPath] = useState<string | null>(null);
-  if (item.image.path && failedPath !== item.image.path)
+  if (artPath && failedPath !== artPath)
     return (
       <div className="art actual-art">
         <img
           draggable={false}
           loading="lazy"
-          src={item.image.path}
+          src={artPath}
           alt={item.name}
-          onError={() => setFailedPath(item.image.path)}
+          onError={() => setFailedPath(artPath)}
         />
       </div>
     );
@@ -142,7 +160,7 @@ function Card({
       aria-label={`${item.name}${placed ? " 보드 아이템" : ""}`}
     >
       <div className="card-top">
-        <span>{placed?.tier || availableTiers(item)[0] || "기존 샘플"}</span>
+        <span>{item.local?.metadataOnly ? (placed ? `메모: ${placed.tier}` : "등급 미확인") : placed?.tier || availableTiers(item)[0] || "기존 샘플"}</span>
         <span>{"▮".repeat(item.size)}</span>
       </div>
       <Art item={item} />
@@ -164,6 +182,7 @@ function Card({
             : ""}
         </span>
       )}
+      {item.local?.chronicleIgnored && <span className="item-notice">Chronicle 제외/숨김 표시</span>}
       <span className="item-tags">{item.tags.join(" · ")}</span>
       {placed && placed.enchant !== "없음" && (
         <span className="enchant-label">✦ {placed.enchant}</span>
@@ -917,6 +936,8 @@ function App() {
             {selected.nameEn !== selected.name && (
               <p className="english-name">{selected.nameEn}</p>
             )}
+            {selected.local && <p>고유 ID: {selected.source.id}</p>}
+            {selected.local && !selected.source.url.startsWith("https://") && <p>검증된 외부 아이템 상세 링크가 없습니다.</p>}
             {!selected.legacy && selected.source.url.startsWith("https://") && (
               <a
                 className="source-link"

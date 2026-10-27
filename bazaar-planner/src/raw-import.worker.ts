@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { importChronicle } from "./chronicle-adapter";
 import { importRawCatalog } from "./raw-adapter";
 self.onmessage = async (
   event: MessageEvent<{ text: string; fileName: string }>,
@@ -16,7 +17,8 @@ self.onmessage = async (
     )
       .map((n) => n.toString(16).padStart(2, "0"))
       .join("");
-    const result = importRawCatalog(JSON.parse(text.replace(/^\uFEFF/, "")), {
+    const parsed = JSON.parse(text.replace(/^\uFEFF/, ""));
+    const result = parsed?.format === "bazaar-chronicle-metadata-v1" ? importChronicle(parsed, fileName, digest) : importRawCatalog(parsed, {
       fileName,
       sha256: digest,
     });

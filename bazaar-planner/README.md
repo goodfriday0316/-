@@ -1,3 +1,5 @@
+> Chronicle 로컬 DB·이미지 ZIP 연동: [사용 방법](docs/CHRONICLE_LOCAL.md), [개발 결과](docs/INTEGRATION_REPORT.md). 게임 데이터와 이미지는 배포에 포함하지 않습니다.
+
 # The Bazaar · Deck Atelier
 
 React + TypeScript + Vite + dnd-kit. 기존 디자인과 10칸 보드를 유지한 데이터 연동 준비 버전입니다.
