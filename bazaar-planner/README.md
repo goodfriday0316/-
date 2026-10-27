@@ -1,3 +1,5 @@
+> 실제 이미지 검증 완료: **1,080장 매칭·저장 성공, 실패 0장, 이미지 없는 항목 37개**. [상세 결과](docs/REAL_IMAGE_VALIDATION.md)
+
 > Chronicle 로컬 DB·이미지 ZIP 연동: [사용 방법](docs/CHRONICLE_LOCAL.md), [개발 결과](docs/INTEGRATION_REPORT.md). 게임 데이터와 이미지는 배포에 포함하지 않습니다.
 
 # The Bazaar · Deck Atelier

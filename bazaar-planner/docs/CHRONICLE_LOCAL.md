@@ -1,3 +1,5 @@
+> 업데이트: 실제 이미지 1,080장 검증 완료. [최종 검증 결과](REAL_IMAGE_VALIDATION.md)를 참조하세요. 아래 미첨부 관련 문장은 최초 구현 당시 기록입니다.
+
 # Bazaar Chronicle 로컬 데이터 / 이미지
 
 기존 React/TypeScript/Vite 플래너를 확장했습니다. Cloudflare에는 dist/ 내용만 배포합니다.
