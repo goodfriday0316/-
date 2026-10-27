@@ -1,0 +1,166 @@
+{
+  "version": "1.0.0-sample",
+  "sample": true,
+  "items": [
+    {
+      "id": "cutlass",
+      "hero": "바네사",
+      "name": "황동 커틀러스",
+      "size": 2,
+      "tags": ["무기", "피해"],
+      "icon": "sword",
+      "color": "#bd9160",
+      "description": "해풍을 머금은 연습용 검. 피해 24를 가합니다."
+    },
+    {
+      "id": "compass",
+      "hero": "바네사",
+      "name": "선장의 나침반",
+      "size": 1,
+      "tags": ["도구", "가속"],
+      "icon": "compass",
+      "color": "#719b94",
+      "description": "길을 잃지 않는 작은 나침반. 인접 아이템에 가속을 부여합니다."
+    },
+    {
+      "id": "cannon",
+      "hero": "바네사",
+      "name": "갑판 대포",
+      "size": 3,
+      "tags": ["무기", "피해"],
+      "icon": "cannon",
+      "color": "#9d8171",
+      "description": "갑판 위의 묵직한 대포. 피해 60을 가합니다."
+    },
+    {
+      "id": "anchor",
+      "hero": "바네사",
+      "name": "깊은 바다의 닻",
+      "size": 2,
+      "tags": ["도구", "방어"],
+      "icon": "anchor",
+      "color": "#688f9e",
+      "description": "바다 아래에서 건져 올린 닻. 방어막 30을 얻습니다."
+    },
+    {
+      "id": "shell",
+      "hero": "바네사",
+      "name": "진주 조개",
+      "size": 1,
+      "tags": ["수생", "회복"],
+      "icon": "shell",
+      "color": "#b5909c",
+      "description": "은은하게 빛나는 조개. 체력을 12 회복합니다."
+    },
+    {
+      "id": "bottle",
+      "hero": "바네사",
+      "name": "병 속의 파도",
+      "size": 1,
+      "tags": ["물약", "가속"],
+      "icon": "flask",
+      "color": "#679c88",
+      "description": "작은 병에 담긴 파도. 아이템 하나에 가속을 부여합니다."
+    },
+    {
+      "id": "wheel",
+      "hero": "바네사",
+      "name": "오래된 조타륜",
+      "size": 2,
+      "tags": ["도구", "가속"],
+      "icon": "wheel",
+      "color": "#b79765",
+      "description": "다음 항해를 준비하는 조타륜. 도구 아이템을 강화합니다."
+    },
+    {
+      "id": "map",
+      "hero": "바네사",
+      "name": "보물 지도",
+      "size": 2,
+      "tags": ["도구", "경제"],
+      "icon": "map",
+      "color": "#b29b73",
+      "description": "아직 발견하지 못한 섬의 지도. 골드를 2 얻습니다."
+    },
+    {
+      "id": "chest",
+      "hero": "피그말리엔",
+      "name": "상인의 금고",
+      "size": 3,
+      "tags": ["경제", "방어"],
+      "icon": "chest",
+      "color": "#b49b61",
+      "description": "상인의 소중한 금고. 골드에 따라 방어막을 얻습니다."
+    },
+    {
+      "id": "core",
+      "hero": "둘리",
+      "name": "작은 동력 코어",
+      "size": 2,
+      "tags": ["코어", "가속"],
+      "icon": "core",
+      "color": "#75aaa2",
+      "description": "실험용 동력 코어. 인접 아이템을 가속합니다."
+    },
+    {
+      "id": "herb",
+      "hero": "막",
+      "name": "약초 꾸러미",
+      "size": 1,
+      "tags": ["회복", "물약"],
+      "icon": "leaf",
+      "color": "#85a66f",
+      "description": "향긋한 약초. 체력을 15 회복합니다."
+    },
+    {
+      "id": "star",
+      "hero": "스텔",
+      "name": "별빛 렌즈",
+      "size": 2,
+      "tags": ["도구", "충전"],
+      "icon": "star",
+      "color": "#9b8dbe",
+      "description": "별빛을 모으는 렌즈. 충전을 1 얻습니다."
+    },
+    {
+      "id": "pan",
+      "hero": "쥴스",
+      "name": "구리 프라이팬",
+      "size": 2,
+      "tags": ["도구", "음식"],
+      "icon": "pan",
+      "color": "#b68061",
+      "description": "따뜻한 한 끼를 위한 도구. 음식 아이템을 강화합니다."
+    },
+    {
+      "id": "fang",
+      "hero": "카르녹",
+      "name": "붉은 송곳니",
+      "size": 1,
+      "tags": ["무기", "피해"],
+      "icon": "sword",
+      "color": "#ba7272",
+      "description": "붉은빛의 연습용 송곳니. 피해 18을 가합니다."
+    },
+    {
+      "id": "egg",
+      "hero": "드래곤즈",
+      "name": "잿빛 알",
+      "size": 3,
+      "tags": ["화염", "충전"],
+      "icon": "flame",
+      "color": "#bf8a66",
+      "description": "온기가 남아 있는 알. 화염을 8 부여합니다."
+    },
+    {
+      "id": "crystal",
+      "hero": "중립",
+      "name": "여행자의 수정",
+      "size": 1,
+      "tags": ["도구", "방어"],
+      "icon": "gem",
+      "color": "#7f9bac",
+      "description": "어디서나 유용한 작은 수정. 방어막 10을 얻습니다."
+    }
+  ]
+}

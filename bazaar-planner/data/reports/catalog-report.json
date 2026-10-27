@@ -1,0 +1,37 @@
+{
+  "status": "blocked",
+  "checkedAt": "2026-10-27",
+  "version": "catalog-pending-2026-10-27",
+  "patchVersion": null,
+  "latestPatchConfirmed": false,
+  "latestObservedPatch": {
+    "version": "19.3",
+    "build": "1.0.12764",
+    "source": "https://bazaardex.com/",
+    "sourceReportedUpdatedAt": "2026-10-23T18:03:00Z",
+    "verification": "community-site-label-only-not-imported-game-data"
+  },
+  "itemCount": 0,
+  "imageCount": 0,
+  "missingImageCount": 0,
+  "imageSuccessRate": null,
+  "officialKoreanCount": 0,
+  "untranslatedCount": 0,
+  "koreanTranslationRate": null,
+  "totalGameItems": null,
+  "note": "No authorized dataset has been imported. Zero counts concern imported items only; completeness of the game database is unknown. Legacy samples are excluded.",
+  "sources": [
+    {
+      "url": "https://github.com/lifein-ai/bazaar-helper",
+      "decision": "not-used-no-redistribution-license-confirmed"
+    },
+    {
+      "url": "https://bazaardex.com/",
+      "decision": "not-used-data-and-image-redistribution-permission-unconfirmed"
+    },
+    {
+      "url": "https://bazaardb.gg/terms",
+      "decision": "excluded-reuse-restrictions-section-2.2"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+playwright/.cache/
+*.tsbuildinfo
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local tooling and generated archives
+.DS_Store
+Thumbs.db
+*.log
+*.zip
+.wrangler/
+
+# Personal deck exports
+bazaar-decks*.json
+tests/*.png
+.data-stage-*/
+research/*.txt
+test-results-production/
+
+# User-owned raw data and local artwork: never commit or ship
+cards_generated.json
+local-data/
+private-data/
+images-private/

@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "id": "authorized-provider",
+    "name": "REPLACE WITH ACTUAL AUTHORIZED SUPPLIER",
+    "url": "https://example.invalid/data-provenance"
+  },
+  "input": {
+    "type": "url",
+    "location": "https://example.invalid/authorized-bulk-export.json"
+  },
+  "patch": {
+    "version": "REPLACE WITH VERIFIED PATCH",
+    "verifiedAt": "REPLACE WITH ISO DATE",
+    "evidenceUrl": "https://example.invalid/patch-notes",
+    "latestConfirmed": false
+  },
+  "permissions": {
+    "data": {
+      "status": "unverified",
+      "evidenceUrl": null,
+      "licenseName": null,
+      "attribution": null,
+      "scope": [],
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    "images": {
+      "status": "unverified",
+      "evidenceUrl": null,
+      "licenseName": null,
+      "attribution": null,
+      "scope": [],
+      "reviewedBy": null,
+      "reviewedAt": null
+    }
+  },
+  "images": { "allowedHosts": [] }
+}
