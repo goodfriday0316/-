@@ -79,3 +79,27 @@ test('IndexedDB images and decks survive closing and restarting Chromium with th
     await expect.poll(()=>restored.locator('.board img').evaluate((e:HTMLImageElement)=>e.naturalWidth)).toBe(4);
   } finally {await context.close();await rm(profile,{recursive:true,force:true});}
 });
+for (const failure of ['missing-asset', 'constructor-blocked'] as const) {
+  test(`JSON import still works when worker is ${failure}`, async ({ page }) => {
+    if (failure === 'missing-asset') {
+      await page.route('**/assets/raw-import.worker-*.js', route => route.abort());
+    } else {
+      await page.addInitScript(() => {
+        window.Worker = function () { throw new DOMException('Worker blocked', 'SecurityError'); } as unknown as typeof Worker;
+      });
+    }
+    const { readFile } = await import('node:fs/promises');
+    const buffer = process.env.CHRONICLE_TEST_JSON
+      ? await readFile(process.env.CHRONICLE_TEST_JSON)
+      : Buffer.from(JSON.stringify({format:'bazaar-chronicle-metadata-v1',items:[record]}));
+    const count = JSON.parse(buffer.toString('utf8')).items.length;
+    await apply(page, buffer);
+    await expect(page.getByRole('note')).toContainText(`개인 파일 아이템 ${count}개`);
+    await page.reload();
+    await expect(page.getByRole('note')).toContainText(`개인 파일 아이템 ${count}개`);
+    // Invalid JSON must explain the error and leave the previous library intact.
+    await page.getByTestId('raw-import').setInputFiles({name:'invalid.json',mimeType:'application/json',buffer:Buffer.from('{invalid')});
+    await expect(page.getByRole('note')).toContainText('JSON 형식이 올바르지 않습니다.');
+    await expect(page.getByRole('note')).toContainText(`개인 파일 아이템 ${count}개`);
+  });
+}

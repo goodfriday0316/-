@@ -8,6 +8,7 @@ import {
   ArrowDownToLine,
 } from "lucide-react";
 import { importImageZip, type ImageReport } from "./image-import";
+import { convertLocalFile } from "./convert-local-file";
 import { catalog } from "./catalog";
 import {
   loadLocalLibrary,
@@ -99,43 +100,72 @@ export function LocalCatalogPanel({ onLibraryChange, onMessage }: Props) {
       setBusy(true);
       const text = await file.text();
       if (!mounted.current) return;
-      const converter = new Worker(
-        new URL("./raw-import.worker.ts", import.meta.url),
-        { type: "module" },
-      );
-      worker.current = converter;
-      converter.onmessage = (event) => {
-        converter.terminate();
-        worker.current = null;
-        if (!mounted.current) return;
-        setBusy(false);
-        if (event.data.type === "error") {
-          onMessage(event.data.message);
-          return;
-        }
-        const { digest, result } = event.data;
-        setPending({
-          version: 1,
-          digest,
-          fileName: file.name,
-          importedAt: new Date().toISOString(),
-          patchVersion: result.report.patchVersion,
-          items: result.items,
-          report: result.report,
+      type Response = ({ type: "success" } & Awaited<ReturnType<typeof convertLocalFile>>) | { type: "error"; message: string };
+      let response: Response;
+      try {
+        response = await new Promise<Response>((resolve, reject) => {
+          const converter = new Worker(
+            new URL("./raw-import.worker.ts", import.meta.url),
+            { type: "module" },
+          );
+          worker.current = converter;
+          const timeout = setTimeout(() => {
+            stop();
+            reject(Error("변환 실행 응답 시간 초과"));
+          }, 15000);
+          function stop() {
+            clearTimeout(timeout);
+            converter.terminate();
+            if (worker.current === converter) worker.current = null;
+          }
+          converter.onmessage = (event: MessageEvent<Response>) => {
+            stop();
+            resolve(event.data);
+          };
+          converter.onerror = (event) => {
+            event.preventDefault();
+            stop();
+            reject(Error("변환 실행 파일을 불러오지 못했습니다."));
+          };
+          converter.onmessageerror = () => {
+            stop();
+            reject(Error("변환 응답을 읽지 못했습니다."));
+          };
+          try {
+            converter.postMessage({ text, fileName: file.name });
+          } catch (error) {
+            stop();
+            reject(error);
+          }
         });
-        setManager(true);
-      };
-      converter.onerror = () => {
-        converter.terminate();
-        worker.current = null;
-        setBusy(false);
-        onMessage("파일 변환을 완료하지 못했습니다. 기존 도감은 유지됩니다.");
-      };
-      converter.postMessage({ text, fileName: file.name });
+      } catch {
+        if (!mounted.current) return;
+        // Missing/stale worker assets or browser policy must not prevent local import.
+        // No file bytes are fetched or uploaded by this fallback.
+        response = { type: "success", ...await convertLocalFile(text, file.name) };
+      }
+      if (!mounted.current) return;
+      if (response.type === "error") throw Error(response.message);
+      const { digest, result } = response;
+      setPending({
+        version: 1,
+        digest,
+        fileName: file.name,
+        importedAt: new Date().toISOString(),
+        patchVersion: result.report.patchVersion,
+        items: result.items,
+        report: result.report,
+      });
+      setStorageNotice("");
+      setManager(true);
     } catch (e) {
-      setBusy(false);
-      onMessage(e instanceof Error ? e.message : "파일을 읽지 못했습니다.");
+      if (mounted.current) {
+        const message = e instanceof Error ? e.message : "파일을 읽지 못했습니다.";
+        setStorageNotice(message);
+        onMessage(message);
+      }
     } finally {
+      if (mounted.current) setBusy(false);
       if (picker.current) picker.current.value = "";
     }
   }
