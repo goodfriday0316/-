@@ -413,3 +413,18 @@ export async function clearAllLocalData(): Promise<void> {
     tx.objectStore(IMAGE_STORE).clear();
   });
 }
+
+/** Read only image identities for catalog filtering; never retain all image Blobs. */
+export async function listLocalImageSources(): Promise<Map<string, string>> {
+  return transaction<Map<string, string>>([IMAGE_STORE], 'readonly', (tx, success) => {
+    const sources = new Map<string, string>();
+    const request = tx.objectStore(IMAGE_STORE).openCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) { success(sources); return; }
+      const image = cursor.value as LocalImage;
+      sources.set(image.itemId, image.sourceId);
+      cursor.continue();
+    };
+  });
+}

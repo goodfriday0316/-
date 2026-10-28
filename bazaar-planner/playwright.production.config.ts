@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
   outputDir: "test-results-production",
-  testMatch: ["**/production.spec.ts", "**/local-import.spec.ts", "**/images.spec.ts"],
+  testMatch: ["**/production.spec.ts", "**/local-import.spec.ts", "**/images.spec.ts", "**/real-ui.spec.ts"],
   use: {
     baseURL: "http://127.0.0.1:5175",
     viewport: { width: 1440, height: 1100 },

@@ -1421,3 +1421,28 @@ footer > span:first-child {
     max-width: calc(100% - 28px);
   }
 }
+
+/* Bound the grid row and every flex child, rather than clipping an oversized card. */
+.placed-layer { grid-template-rows: minmax(0, 1fr); min-height: 0; }
+.placed-wrap { height: 100%; min-height: 0; }
+.on-board {
+  box-sizing: border-box;
+  min-height: 0;
+  max-height: 100%;
+  gap: 2px;
+}
+.on-board > :not(.art) { flex: 0 0 auto; min-width: 0; }
+.on-board .art { flex: 1 1 0; height: 0; min-height: 0; }
+.on-board .actual-art img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.on-board strong { line-height: 1.25; margin-top: 0; }
+.on-board .item-notice, .on-board .item-tags, .on-board .enchant-label {
+  display: block;
+  margin-top: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.image-visibility-filter { display: flex; align-items: center; gap: 7px; font-size: 11px; margin: 12px 19px 4px; cursor: pointer; }
+.image-filter-help { font-size: 10px; color: #8fa283; margin: 0 19px 8px; }

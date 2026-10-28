@@ -54,6 +54,7 @@ test('actual read-only SQLite export imports all metadata and preserves deck on 
   await apply(page,await readFile(process.env.CHRONICLE_TEST_JSON!));
   await expect(page.getByRole('note')).toContainText('개인 파일 아이템 1117개');
   await page.reload();await expect(page.getByRole('note')).toContainText('개인 파일 아이템 1117개');
+  await page.getByRole('checkbox', {name:'이미지 없는 아이템 표시'}).check();
   await expect(page.locator('.item-grid .item-card').first()).toBeVisible();
 });
 test('IndexedDB images and decks survive closing and restarting Chromium with the same profile',async()=>{

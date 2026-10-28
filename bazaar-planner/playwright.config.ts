@@ -6,7 +6,7 @@ const executablePath =
 export default defineConfig({
   testDir: "./tests",
   testMatch: "**/*.spec.ts",
-  testIgnore: ["**/production.spec.ts", "**/local-import.spec.ts", "**/images.spec.ts"],
+  testIgnore: ["**/production.spec.ts", "**/local-import.spec.ts", "**/images.spec.ts", "**/real-ui.spec.ts"],
   use: {
     baseURL: "http://127.0.0.1:5174",
     viewport: { width: 1440, height: 1100 },

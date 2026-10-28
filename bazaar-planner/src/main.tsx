@@ -71,7 +71,7 @@ import {
 } from "./model";
 import { matchesHero, tierKeys } from "./catalog";
 import { LocalCatalogPanel } from "./LocalCatalogPanel";
-import { getLocalImage, type LocalLibrary } from "./local-library";
+import { getLocalImage, listLocalImageSources, type LocalLibrary } from "./local-library";
 import "./style.css";
 const icons: Record<string, typeof Anchor> = {
   sword: Swords,
@@ -157,6 +157,7 @@ function Card({
       style={{
         opacity: isDragging ? 0.3 : 1,
       }}
+      data-item-id={item.id}
       aria-label={`${item.name}${placed ? " 보드 아이템" : ""}`}
     >
       <div className="card-top">
@@ -247,7 +248,7 @@ function loadSavedDecks() {
 }
 function App() {
   const [loaded] = useState(loadSavedDecks);
-  const [, setCatalogRevision] = useState(0);
+  const [catalogRevision, setCatalogRevision] = useState(0);
   function onLocalLibrary(library: LocalLibrary | null) {
     setLocalCatalog(
       library?.items ?? null,
@@ -261,6 +262,20 @@ function App() {
   const [saveBlocked, setSaveBlocked] = useState(loaded.failed);
   const recoveryWritten = useRef(false);
   const migrationWritten = useRef(false);
+  const [showMissingImages, setShowMissingImages] = useState(false);
+  const [imageSources, setImageSources] = useState<globalThis.Map<string, string>>(new globalThis.Map());
+  useEffect(() => {
+    let cancelled = false;
+    let revision = 0;
+    async function refresh() {
+      const request = ++revision;
+      const sources = await listLocalImageSources().catch(() => new globalThis.Map<string, string>());
+      if (!cancelled && request === revision) setImageSources(sources);
+    }
+    void refresh();
+    window.addEventListener('bazaar-local-images-changed', refresh);
+    return () => { cancelled = true; window.removeEventListener('bazaar-local-images-changed', refresh); };
+  }, [catalogRevision]);
   const [query, setQuery] = useState("");
   const [size, setSize] = useState(0);
   const [selection, setSelection] = useState<{
@@ -416,7 +431,11 @@ function App() {
     }
     if (file.current) file.current.value = "";
   }
-  const filtered = items.filter(
+  // Chronicle data has explicit image identity metadata. Keep older raw catalogs
+  // and bundled catalogs compatible; this visibility filter never mutates decks.
+  const visibleItems = items.filter(i => showMissingImages || !i.local?.metadataOnly ||
+    Boolean(i.image.path) || imageSources.get(i.id) === i.source.id);
+  const filtered = visibleItems.filter(
     (i) =>
       matchesHero(i, deck.hero) &&
       (!size || i.size === size) &&
@@ -521,7 +540,7 @@ function App() {
                 <Package size={17} /> 아이템 도감
               </span>
               <span className="muted">
-                {items.filter((i) => matchesHero(i, deck.hero)).length} ITEMS
+                {visibleItems.filter((i) => matchesHero(i, deck.hero)).length} ITEMS
               </span>
             </div>
             <div className="hero-picker">
@@ -571,6 +590,12 @@ function App() {
                 </button>
               ))}
             </div>
+            <label className="image-visibility-filter">
+              <input type="checkbox" checked={showMissingImages}
+                onChange={e => setShowMissingImages(e.target.checked)} />
+              이미지 없는 아이템 표시
+            </label>
+            <p className="image-filter-help">전체 도감 {visibleItems.length} / {items.length}개 · 이미지 유무는 게임 활성 여부와 다릅니다.</p>
             <div className="catalog-meta">
               <span>{filtered.length}개의 아이템</span>
               <span>
@@ -591,7 +616,7 @@ function App() {
             {!filtered.length && (
               <div className="empty-search">
                 {data.status === "ready"
-                  ? "검색 결과가 없습니다."
+                  ? (!showMissingImages && items.some(i => i.local?.metadataOnly) ? "이미지 있는 검색 결과가 없습니다. 개인 도감 관리에서 이미지 ZIP을 불러오거나 이미지 없는 아이템 표시를 켜세요." : "검색 결과가 없습니다.")
                   : "사용 가능한 실제 데이터가 없습니다."}
                 <br />
                 <button
