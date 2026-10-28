@@ -8,6 +8,7 @@ async function apply(page: import('@playwright/test').Page, buffer:Buffer) {
   await expect(page.getByRole('button',{name:'원본 JSON 불러오기',exact:true})).toBeEnabled();
   await page.getByTestId('raw-import').setInputFiles({name:'metadata.json',mimeType:'application/json',buffer});
   await page.getByRole('button',{name:'이 파일을 개인 도감으로 사용'}).click();
+  await expect(page.getByRole('note')).toContainText('이 브라우저에 보관됨');
 }
 test('ZIP UUID matching, invalid/duplicate reports, actual Blob rendering and persistence in a new page',async({page,context})=>{
   await apply(page,Buffer.from(JSON.stringify({format:'bazaar-chronicle-metadata-v1',items:[record,{...record,id:'22222222-2222-4222-8222-222222222222',name:'Missing image',imageId:null}]})));

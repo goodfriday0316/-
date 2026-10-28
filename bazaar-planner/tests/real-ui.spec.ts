@@ -19,6 +19,7 @@ for(const mobile of [false,true]) test(`real artwork stays within board; image v
     for(const [id,label] of pairs){
       await page.getByLabel('영웅 선택',{exact:true}).selectOption({label});
       const expected=input.items.filter((i:any)=>i.heroes.includes(id));
+      if(!expected.length) await expect(page.locator('.empty-search')).toContainText('불러온 도감에 이 영웅의 아이템이 없습니다.');
       await expect(page.locator('.item-grid .item-card')).toHaveCount(expected.filter((i:any)=>i.imageId).length);
       withImages+=await page.locator('.item-grid .item-card').count();
       for(const id of await page.locator('.item-grid .item-card').evaluateAll(cards=>cards.map(c=>c.getAttribute('data-item-id')!))) visibleIds.add(id);
@@ -49,12 +50,16 @@ for(const mobile of [false,true]) test(`real artwork stays within board; image v
       const b=board.getBoundingClientRect();
       return [...board.querySelectorAll('.on-board')].map(card=>{
         const c=card.getBoundingClientRect(),wrap=card.parentElement!.getBoundingClientRect();
+        const placement=card.closest('.placed-wrap')!;
+        const start=parseInt((placement as HTMLElement).style.gridColumn,10)-1;
+        const slot=board.querySelector(`[data-testid="slot-${start}"]`)!.getBoundingClientRect();
+        const remove=placement.querySelector('.card-controls button')!.getBoundingClientRect();
         const art=card.querySelector('.art')!.getBoundingClientRect(),name=card.querySelector('strong')!.getBoundingClientRect();
         const img=card.querySelector('img')!;
-        return {top:c.top-b.top,bottom:b.bottom-c.bottom,height:c.height,wrapHeight:wrap.height,scrollHeight:card.scrollHeight,clientHeight:card.clientHeight,artHeight:art.height,nameBottom:c.bottom-name.bottom,fit:getComputedStyle(img).objectFit};
+        return {slotTopDelta:Math.abs(c.top-slot.top),slotBottomDelta:Math.abs(c.bottom-slot.bottom),removeInside:c.bottom-remove.bottom,removeBelowName:remove.top-name.bottom,top:c.top-b.top,bottom:b.bottom-c.bottom,height:c.height,wrapHeight:wrap.height,scrollHeight:card.scrollHeight,clientHeight:card.clientHeight,artHeight:art.height,nameBottom:c.bottom-name.bottom,fit:getComputedStyle(img).objectFit};
       });
     });
-    for(const b of bounds){expect(b.top).toBeGreaterThanOrEqual(0);expect(b.bottom).toBeGreaterThanOrEqual(0);expect(b.height).toBeLessThanOrEqual(b.wrapHeight+1);expect(b.scrollHeight).toBeLessThanOrEqual(b.clientHeight+1);expect(b.artHeight).toBeGreaterThan(10);expect(b.nameBottom).toBeGreaterThanOrEqual(0);expect(b.fit).toBe('contain');}
+    for(const b of bounds){expect(b.slotTopDelta).toBeLessThanOrEqual(1);expect(b.slotBottomDelta).toBeLessThanOrEqual(1);expect(b.removeInside).toBeGreaterThanOrEqual(0);expect(b.removeBelowName).toBeGreaterThanOrEqual(0);expect(b.top).toBeGreaterThanOrEqual(0);expect(b.bottom).toBeGreaterThanOrEqual(0);expect(b.height).toBeLessThanOrEqual(b.wrapHeight+1);expect(b.scrollHeight).toBeLessThanOrEqual(b.clientHeight+1);expect(b.artHeight).toBeGreaterThan(10);expect(b.nameBottom).toBeGreaterThanOrEqual(0);expect(b.fit).toBe('contain');}
     const source=page.getByRole('button',{name:names[2]+' 보드 아이템',exact:true});
     if(!mobile){
       const a=(await source.boundingBox())!,b=(await page.getByTestId('slot-6').boundingBox())!;

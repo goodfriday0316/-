@@ -594,7 +594,11 @@ function App() {
             {!filtered.length && (
               <div className="empty-search">
                 {data.status === "ready"
-                  ? (!showMissingImages && items.some(i => i.local?.metadataOnly) ? "이미지 있는 검색 결과가 없습니다. 개인 도감 관리에서 이미지 ZIP을 불러오거나 이미지 없는 아이템 표시를 켜세요." : "검색 결과가 없습니다.")
+                  ? (!items.some(i => matchesHero(i, deck.hero))
+                    ? "불러온 도감에 이 영웅의 아이템이 없습니다."
+                    : (!showMissingImages && items.some(i => i.local?.metadataOnly) && !query && !size
+                      ? "이미지 있는 검색 결과가 없습니다. 개인 도감 관리에서 이미지 ZIP을 불러오거나 이미지 없는 아이템 표시를 켜세요."
+                      : "검색 결과가 없습니다."))
                   : "사용 가능한 실제 데이터가 없습니다."}
                 <br />
                 <button
@@ -608,7 +612,7 @@ function App() {
               </div>
             )}
             <div className="catalog-foot">
-              <CircleHelp size={14} /> 클릭하여 추가 · 터치로 길게 눌러 드래그
+              <CircleHelp size={14} /> 클릭하여 상세 보기 · 추가 버튼 또는 길게 눌러 드래그
             </div>
           </aside>
           <section className="workspace">

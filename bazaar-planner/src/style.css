@@ -1483,3 +1483,23 @@ footer > span:first-child {
 .source-link:disabled { opacity: .45; cursor: default; text-decoration: none; }
 @media (min-width:1151px) { .item-details-toolbar { width:calc(100% - 48px); min-width:1457px; max-width:1635px; margin-left:auto; margin-right:auto; } }
 @media (max-width:800px) { .item-details-toolbar { margin-left:20px; margin-right:20px; } }
+
+/* The remove action is a sibling button inside the full-height card outline.
+   Reserve its space within the card instead of adding a second row below it. */
+.on-board-container { position: relative; gap: 0; }
+.on-board-container > .on-board { height: 100%; padding-bottom: 32px; }
+.on-board-container > .card-controls {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+}
+.on-board-container .card-controls button {
+  max-width: 100%;
+  padding: 3px 2px;
+  gap: 2px;
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.on-board-container .card-controls svg { flex-shrink: 0; }
