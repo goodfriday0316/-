@@ -10,7 +10,11 @@ import tempfile
 import uuid
 import zipfile
 
-DRAGON_HEROES = frozenset(('Dragons', 'The Dragons'))
+# Exact aliases only; source values are retained in the report, never rewritten.
+# TheDragons/Hero8: BazaarPlusPlus TheDragonsHeroId.cs at
+# https://github.com/BazaarPlusPlus/BazaarPlusPlus/blob/fe1fe705fc084cb8f99314e758fcf7f40cf57fa5/bazaarplusplus-mod/src/BazaarPlusPlus.Core/GameState/TheDragonsHeroId.cs
+DRAGON_HEROES = frozenset(('Dragons', 'The Dragons', 'TheDragons', 'Hero8'))
+COMPARISON_FIELDS = ('name', 'heroes', 'size', 'tags', 'artKey')
 MAX_DB = 1024 * 1024 * 1024
 MAX_IMAGE = 5 * 1024 * 1024
 
@@ -194,10 +198,18 @@ def compare(game_path, chronicle_path, image_paths=()):
             if ident in old: raise ValueError('Duplicate Chronicle ID: ' + ident)
             old[ident] = {'id': ident, 'name': name, 'heroes': strings(json.loads(heroes), 'chronicle-heroes'),
                           'size': size, 'tags': strings(json.loads(tags), 'chronicle-tags'), 'artKey': art}
+    changed_by_field = dict.fromkeys(COMPARISON_FIELDS, 0)
+    membership_changes = {'heroes': 0, 'tags': 0}
     for ident in sorted(set(eligible) & set(old)):
         changes = {key: {'chronicle': old[ident][key], 'game': eligible[ident][key]}
-                   for key in ('name', 'heroes', 'size', 'tags', 'artKey') if old[ident][key] != eligible[ident][key]}
-        if changes: details['changes'].append({'id': ident, 'fields': changes})
+                   for key in COMPARISON_FIELDS if old[ident][key] != eligible[ident][key]}
+        if changes:
+            details['changes'].append({'id': ident, 'fields': changes})
+            for key in changes:
+                changed_by_field[key] += 1
+        for key in membership_changes:
+            if set(old[ident][key]) != set(eligible[ident][key]):
+                membership_changes[key] += 1
     images, image_report = image_index(image_paths)
     for ident in sorted(set(eligible) - set(old)):
         details['newItems'].append({**eligible[ident], 'imageMatched': ident in images if image_paths else None})
@@ -218,7 +230,10 @@ def compare(game_path, chronicle_path, image_paths=()):
         'summary': {'rawItemCount': raw_count, 'chronicleEligibleCount': len(eligible), 'chronicleCount': len(old),
             'existingIds': len(set(eligible) & set(old)), 'newEligibleIds': len(set(eligible) - set(old)),
             'rawIdsAbsentFromChronicle': len(set(raw) - set(old)), 'chronicleOnlyIds': len(set(old) - set(raw)),
-            'metadataChangedIds': len(details['changes']), 'rawDragonsItems': len(dragons),
+            'metadataChangedIds': len(details['changes']), 'metadataChangedByField': changed_by_field,
+            'heroMembershipChangedIds': membership_changes['heroes'],
+            'tagMembershipChangedIds': membership_changes['tags'],
+            'rawDragonsItems': len(dragons),
             'eligibleDragonsItems': len(dragons & set(eligible)), 'newDragonsItems': len((dragons & set(eligible)) - set(old)),
             'dragonImagesMatched': len(dragons & images) if image_paths else None,
             'imageFiles': image_report['files'] if image_paths else None,
@@ -241,6 +256,8 @@ def summary_text(report):
         f"Game Item records: {s['rawItemCount']}", f"Chronicle-eligible: {s['chronicleEligibleCount']}",
         f"Existing exact IDs: {s['existingIds']}; new eligible IDs: {s['newEligibleIds']}",
         f"Changed metadata IDs: {s['metadataChangedIds']}",
+        'Changed fields (exact values, including array order): ' + ', '.join(f'{key}={count}' for key, count in s['metadataChangedByField'].items()),
+        f"Membership changes (ignoring order and duplicates): heroes={s['heroMembershipChangedIds']}, tags={s['tagMembershipChangedIds']}",
         f"Dragons raw/eligible/new: {s['rawDragonsItems']}/{s['eligibleDragonsItems']}/{s['newDragonsItems']}",
         f"Dragons images matched: {s['dragonImagesMatched']}",
         'Detailed IDs and classifications are in the JSON report.', 'No original files or deck data were modified.']) + '\n'

@@ -78,6 +78,9 @@ class CompareTests(unittest.TestCase):
             self.assertEqual(before, [digest(p/n) for n in ['GameData.db', 'templates.sqlite3']])
             self.assertEqual(report['details']['newItems'], [])
             self.assertEqual(len(report['details']['excludedItems']), 1)
+            self.assertEqual(s['metadataChangedByField'], {'name': 0, 'heroes': 0, 'size': 0, 'tags': 0, 'artKey': 0})
+            self.assertEqual(s['heroMembershipChangedIds'], 0)
+            self.assertEqual(s['tagMembershipChangedIds'], 0)
 
     def test_new_dragons_and_existing_wrong_heroes_use_ids_not_tag_or_art_key(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -96,6 +99,76 @@ class CompareTests(unittest.TestCase):
                 self.assertEqual(s[key], count, key)
             self.assertEqual(len(report['details']['dragonsItems']), 2)
             self.assertEqual(originals, {name: digest(p/name) for name in originals})
+
+    def test_canonical_and_legacy_dragons_aliases_preserve_original_hero_values(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = pathlib.Path(temp)
+            canonical = card(A, 'Canonical Synthetic', ['TheDragons'])
+            legacy = card(B, 'Legacy Synthetic', ['Hero8'])
+            tag_only = card(C, 'Dragon Synthetic', ['Common'], ['Dragon'])
+            other_hero = card(D, 'Similar Hero Synthetic', ['Hero80'])
+            cards = [canonical, legacy, tag_only, other_hero]
+            game(p/'GameData.db', [(c['Id'], c) for c in cards])
+            chronicle(p/'templates.sqlite3', cards)
+            report = module.compare(p/'GameData.db', p/'templates.sqlite3')
+            self.assertEqual(report['summary']['rawDragonsItems'], 2)
+            self.assertEqual(report['summary']['eligibleDragonsItems'], 2)
+            self.assertEqual(report['summary']['newDragonsItems'], 0)
+            self.assertEqual({i['id']: i['heroes'] for i in report['details']['dragonsItems']},
+                             {A: ['TheDragons'], B: ['Hero8']})
+            self.assertEqual(report['heroValues'], {'Common': 1, 'Hero8': 1, 'Hero80': 1, 'TheDragons': 1})
+            self.assertEqual(set(report['targetHeroValues']), {'Dragons', 'The Dragons', 'TheDragons', 'Hero8'})
+
+    def test_whole_catalog_field_counts_and_new_ids_are_independent_of_similar_names(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = pathlib.Path(temp)
+            old_a = card(A, 'Synthetic A', ['Common'], ['Tool'])
+            old_b = card(B, 'Synthetic B', ['Dooley'], ['Weapon'])
+            stable = card(C, 'Same Synthetic Name', ['Common'], ['Dragon'])
+            new_a = card(A, 'Synthetic A Revised', ['TheDragons'], ['Tool', 'Weapon'], 'revised-art')
+            new_a['Size'] = 'Medium'
+            new_b = card(B, 'Synthetic B', ['Vanessa'], ['Weapon', 'Tech'])
+            distinct_id = card(D, 'Same Synthetic Name', ['Common'], ['Dragon'])
+            game(p/'GameData.db', [(c['Id'], c) for c in [new_a, new_b, stable, distinct_id]])
+            chronicle(p/'templates.sqlite3', [old_a, old_b, stable])
+            report = module.compare(p/'GameData.db', p/'templates.sqlite3')
+            self.assertEqual(report['summary']['existingIds'], 3)
+            self.assertEqual(report['summary']['newEligibleIds'], 1)
+            self.assertEqual(report['summary']['metadataChangedIds'], 2)
+            self.assertEqual(report['summary']['metadataChangedByField'],
+                             {'name': 1, 'heroes': 2, 'size': 1, 'tags': 2, 'artKey': 1})
+            self.assertEqual(report['summary']['heroMembershipChangedIds'], 2)
+            self.assertEqual(report['summary']['tagMembershipChangedIds'], 2)
+            self.assertEqual([i['id'] for i in report['details']['newItems']], [D])
+            changes = {i['id']: i['fields'] for i in report['details']['changes']}
+            self.assertEqual(changes[A]['heroes'], {'chronicle': ['Common'], 'game': ['TheDragons']})
+            self.assertEqual(changes[B]['tags'], {'chronicle': ['Weapon'], 'game': ['Weapon', 'Tech']})
+            self.assertNotIn(C, changes)
+            self.assertIn('heroes=2', module.summary_text(report))
+
+    def test_membership_counts_distinguish_array_order_from_changed_hero_and_tag_values(self):
+        for heroes, tags, expected_membership in [
+            (['Common', 'Vanessa'], ['Tool', 'Weapon'], 0),
+            (['Vanessa', 'Dragons'], ['Weapon', 'Tech'], 1),
+        ]:
+            with self.subTest(heroes=heroes, tags=tags), tempfile.TemporaryDirectory() as temp:
+                p = pathlib.Path(temp)
+                previous = card(A, 'Synthetic', ['Vanessa', 'Common'], ['Weapon', 'Tool'])
+                current = card(A, 'Synthetic', heroes, tags)
+                game(p/'GameData.db', [(A, current)])
+                chronicle(p/'templates.sqlite3', [previous])
+                report = module.compare(p/'GameData.db', p/'templates.sqlite3')
+                summary = report['summary']
+                self.assertEqual(summary['metadataChangedIds'], 1)
+                self.assertEqual(summary['metadataChangedByField'],
+                                 {'name': 0, 'heroes': 1, 'size': 0, 'tags': 1, 'artKey': 0})
+                self.assertEqual(summary['heroMembershipChangedIds'], expected_membership)
+                self.assertEqual(summary['tagMembershipChangedIds'], expected_membership)
+                fields = report['details']['changes'][0]['fields']
+                self.assertEqual(fields['heroes'], {'chronicle': previous['Heroes'], 'game': heroes})
+                self.assertEqual(fields['tags'], {'chronicle': previous['Tags'], 'game': tags})
+                self.assertIn('including array order', module.summary_text(report))
+                self.assertIn(f'heroes={expected_membership}, tags={expected_membership}', module.summary_text(report))
 
     def test_json_row_id_conflicts_and_invalid_records_are_not_repaired_by_guessing(self):
         with tempfile.TemporaryDirectory() as temp:
