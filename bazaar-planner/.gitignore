@@ -34,3 +34,9 @@ images-private/
 
 # Local Python caches
 __pycache__/
+
+# Personal official game localization inputs / generated mappings
+GameData.db
+GameData.db.zip
+ko-KR.bytes
+korean-names*.json

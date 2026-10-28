@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 const key = "bazaar-planner-v1";
 test("production states zero real catalog honestly and preserves legacy deck through migration/reload/export", async ({
   page,
@@ -64,6 +65,13 @@ test("production states zero real catalog honestly and preserves legacy deck thr
     page.getByRole("button", { name: "JSON 내보내기" }).click(),
   ]);
   expect(download.suggestedFilename()).toBe("bazaar-decks.json");
+  const exported = JSON.parse(await readFile((await download.path())!, "utf8"));
+  expect(exported.decks[0].items[0]).toMatchObject({tier:"골드",enchant:"화염"});
+  await page.getByTestId("deck-import").setInputFiles({name:"roundtrip.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(exported))});
+  await page.reload();
+  const restored = await page.evaluate(k => JSON.parse(localStorage.getItem(k)!), key);
+  expect(restored).toEqual(exported);
+  await expect(page.locator(".board")).not.toContainText("골드");
   await page.screenshot({
     path: "test-results-production/production-desktop.png",
     fullPage: true,
@@ -132,7 +140,12 @@ test("unknown retired ID is preserved via snapshot instead of resetting the deck
   await page
     .getByRole("button", { name: "Archived Item 보드 아이템", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toContainText("Archived source text");
+  const dialog = page.getByRole("dialog", { name: "아이템 툴팁" });
+  await expect(dialog).toContainText("Archived Item");
+  await expect(dialog).not.toContainText("Archived source text");
+  await expect(dialog.getByLabel("아이템 등급", { exact: true })).toHaveCount(0);
+  const restored = await page.evaluate(k => JSON.parse(localStorage.getItem(k)!), key);
+  expect(restored.decks[0].items[0]).toEqual(save.decks[0].items[0]);
 });
 test("blocked production mobile layout keeps browser usable without catalog fixtures", async ({
   page,

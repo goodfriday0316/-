@@ -60,12 +60,13 @@ test("browser worker imports local raw format, reports exclusions and sends no f
   await page
     .getByRole("button", { name: "SYNTHETIC MEDIUM", exact: true })
     .click();
-  await expect(page.getByRole("dialog", { name: "아이템 툴팁" })).toContainText(
-    "미해석",
-  );
-  await expect(page.getByRole("dialog", { name: "아이템 툴팁" })).toContainText(
-    "활성 여부 불확실",
-  );
+  const itemDialog = page.getByRole("dialog", { name: "아이템 툴팁" });
+  await expect(itemDialog).toContainText("SYNTHETIC MEDIUM");
+  await expect(itemDialog).toContainText("2칸");
+  await expect(itemDialog).not.toContainText("미해석");
+  await expect(itemDialog).not.toContainText("활성 여부 불확실");
+  await expect(itemDialog).not.toContainText("고유 ID");
+  await expect(itemDialog.getByRole("button", { name: "Bazaardex에서 보기" })).toBeDisabled();
 });
 test("inheritance, zero, local catalog reload, stable IDs, deck export/import and catalog deletion preserve decks", async ({
   page,
@@ -75,13 +76,18 @@ test("inheritance, zero, local catalog reload, stable IDs, deck export/import an
   await page
     .getByRole("button", { name: "SYNTHETIC SMALL", exact: true })
     .click();
-  await page.getByLabel("효과 미리보기 등급").selectOption("실버");
-  await expect(page.getByRole("dialog")).toContainText("Value 41");
-  await expect(page.getByRole("dialog")).toContainText("7300");
-  await page.getByLabel("효과 미리보기 등급").selectOption("골드");
-  await expect(page.getByRole("dialog")).toContainText("Value 0");
+  await expect(page.getByRole("dialog").locator(".item-effects")).toHaveCount(0);
+  await expect(page.getByRole("dialog").getByLabel("효과 미리보기 등급")).toHaveCount(0);
   await page.getByRole("button", { name: "빈 공간에 추가" }).click();
   const saved = await state(page);
+  // Converted values remain in the stored snapshot even though normal UI omits them.
+  expect(saved.decks[0].items[0].snapshot.tiers.silver.effects.join(" ")).toContain("Value 41");
+  expect(saved.decks[0].items[0].snapshot.tiers.gold.effects.join(" ")).toContain("Value 0");
+  expect(saved.decks[0].items[0].snapshot.tiers.silver.stats.CooldownMax).toBe(7300);
+  saved.decks[0].items[0].tier = "골드";
+  saved.decks[0].items[0].enchant = "독";
+  await page.getByTestId("deck-import").setInputFiles({name:"previous-deck.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(saved))});
+  await expect.poll(async () => (await state(page)).decks[0].items[0].tier).toBe("골드");
   expect(saved.decks[0].items[0].itemId).toBe("local-raw:synthetic-small");
   await page.reload();
   await expect(page.getByRole("note")).toContainText("개인 파일 아이템 3개");

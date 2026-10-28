@@ -251,7 +251,7 @@ export function LocalCatalogPanel({ onLibraryChange, onMessage }: Props) {
         <div>
           <strong>
             {library
-              ? `개인 파일 아이템 ${library.items.length}개 · 패치 ${library.patchVersion || "미확인"}`
+              ? `개인 파일 아이템 ${library.items.length}개`
               : catalog.status === "ready"
                 ? `${catalog.items.length}개 실제 아이템 · 패치 ${catalog.patchVersion}`
                 : "실제 아이템 데이터 연결 대기"}
@@ -260,7 +260,7 @@ export function LocalCatalogPanel({ onLibraryChange, onMessage }: Props) {
             {busy
               ? "파일을 브라우저 안에서 처리하고 있습니다…"
               : library
-                ? `${library.fileName} · ${persisted ? "이 브라우저에 보관됨" : "현재 탭에서만 사용"} · 활성 여부와 미해석 효과는 별도 표시`
+                ? `${library.fileName} · ${persisted ? "이 브라우저에 보관됨" : "현재 탭에서만 사용"}`
                 : catalog.status === "ready"
                   ? "출처와 패치가 기록된 데이터입니다."
                   : "허용 범위에서 보유한 원본 JSON을 선택하세요. 파일 내용은 서버로 전송되지 않습니다."}

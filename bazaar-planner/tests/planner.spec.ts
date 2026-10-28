@@ -47,20 +47,16 @@ test("drag, overlap and boundary validation, move, reload and remove", async ({
   await page
     .getByRole("button", { name: "갑판 대포 보드 아이템", exact: true })
     .click();
-  await page
-    .getByLabel("아이템 등급", { exact: true })
-    .selectOption("다이아몬드");
-  await page.getByLabel("마법부여", { exact: true }).selectOption("화염");
+  const dialog = page.getByRole("dialog", { name: "아이템 툴팁" });
+  await expect(dialog.getByLabel("아이템 등급", { exact: true })).toHaveCount(0);
+  await expect(dialog.getByLabel("마법부여", { exact: true })).toHaveCount(0);
+  await expect(dialog.locator(".item-effects")).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Bazaardex에서 보기" })).toBeDisabled();
+  const internal = (await state(page)).decks[0].items[0];
   await page.getByRole("button", { name: "툴팁 닫기" }).click();
   await page.reload();
-  expect((await state(page)).decks[0].items[0]).toMatchObject({
-    tier: "다이아몬드",
-    enchant: "화염",
-  });
-  await page
-    .getByRole("button", { name: "갑판 대포 보드 아이템", exact: true })
-    .click();
-  await page.getByRole("button", { name: "보드에서 제거" }).click();
+  expect((await state(page)).decks[0].items[0]).toEqual(internal);
+  await page.getByRole("button", { name: "갑판 대포 보드에서 제거", exact: true }).click();
   expect((await state(page)).decks[0].items).toHaveLength(1);
 });
 test("heroes, tags, clone, compare, export/import and invalid import", async ({

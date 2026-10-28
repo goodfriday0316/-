@@ -1469,3 +1469,17 @@ footer > span:first-child {
     overflow-wrap: anywhere;
   }
 }
+
+/* Compact item presentation: drag handle/link and actions are separate buttons. */
+.card-container { display: flex; flex-direction: column; min-width: 0; min-height: 0; gap: 3px; }
+.card-container > .item-card { flex: 1 1 auto; }
+.on-board-container { height: 100%; }
+.on-board-container > .item-card { height: auto; flex: 1 1 0; }
+.card-controls { flex: 0 0 auto; display: flex; justify-content: flex-end; }
+.card-controls button { padding: 3px 6px; font-size: 10px; display: inline-flex; align-items: center; gap: 3px; }
+.card-english { display: block; font-size: 9px; color: #8fa283; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.on-board .card-english { flex: 0 0 auto; font-size: 8px; }
+.item-details-toolbar { margin: -10px 4% 18px; display: flex; justify-content: flex-end; }
+.source-link:disabled { opacity: .45; cursor: default; text-decoration: none; }
+@media (min-width:1151px) { .item-details-toolbar { width:calc(100% - 48px); min-width:1457px; max-width:1635px; margin-left:auto; margin-right:auto; } }
+@media (max-width:800px) { .item-details-toolbar { margin-left:20px; margin-right:20px; } }

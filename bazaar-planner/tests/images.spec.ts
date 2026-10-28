@@ -96,6 +96,7 @@ for (const failure of ['missing-asset', 'constructor-blocked'] as const) {
     const count = JSON.parse(buffer.toString('utf8')).items.length;
     await apply(page, buffer);
     await expect(page.getByRole('note')).toContainText(`개인 파일 아이템 ${count}개`);
+    await expect(page.getByRole('note')).toContainText('이 브라우저에 보관됨');
     await page.reload();
     await expect(page.getByRole('note')).toContainText(`개인 파일 아이템 ${count}개`);
     // Invalid JSON must explain the error and leave the previous library intact.

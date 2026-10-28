@@ -52,12 +52,9 @@ import {
   data,
   items,
   heroes,
-  tiers,
-  enchants,
   getItem,
   getPlacedItem,
   availableTiers,
-  effectFor,
   uid,
   canPlace,
   validate,
@@ -69,9 +66,11 @@ import {
   type Save,
   type Deck,
 } from "./model";
-import { matchesHero, tierKeys } from "./catalog";
+import { matchesHero } from "./catalog";
 import { LocalCatalogPanel } from "./LocalCatalogPanel";
 import { getLocalImage, listLocalImageSources, type LocalLibrary } from "./local-library";
+import { enrichItem as displayItem, getBazaardexUrl } from './item-details';
+import { LocalItemDetailsPanel } from './LocalItemDetailsPanel';
 import "./style.css";
 const icons: Record<string, typeof Anchor> = {
   sword: Swords,
@@ -134,63 +133,38 @@ function Art({ item }: { item: Item }) {
     </div>
   );
 }
-function Card({
-  item,
-  placed,
-  onSelect,
-}: {
+function Card({ item, placed, onSelect, onAdd, onRemove }: {
   item: Item;
   placed?: Placed;
   onSelect: () => void;
+  onAdd?: () => void;
+  onRemove?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: placed ? `placed:${placed.id}` : `catalog:${item.id}`,
     data: { itemId: item.id, placedId: placed?.id, item },
   });
   return (
-    <button
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      onClick={onSelect}
-      className={`item-card ${placed ? "on-board" : ""} ${isDragging ? "dragging" : ""}`}
-      style={{
-        opacity: isDragging ? 0.3 : 1,
-      }}
-      data-item-id={item.id}
-      aria-label={`${item.name}${placed ? " 보드 아이템" : ""}`}
-    >
-      <div className="card-top">
-        <span>{item.local?.metadataOnly ? (placed ? `메모: ${placed.tier}` : "등급 미확인") : placed?.tier || availableTiers(item)[0] || "기존 샘플"}</span>
-        <span>{"▮".repeat(item.size)}</span>
+    <div className={`card-container ${placed ? "on-board-container" : ""}`}>
+      <button ref={setNodeRef} {...listeners} {...attributes}
+        onClick={() => { if (!isDragging) onSelect(); }}
+        className={`item-card ${placed ? "on-board" : ""} ${isDragging ? "dragging" : ""}`}
+        style={{ opacity: isDragging ? 0.3 : 1 }}
+        data-item-id={item.id}
+        aria-label={`${item.name}${placed ? " 보드 아이템" : ""}`}>
+        <div className="card-top"><span>{item.size}칸</span><span>{"▮".repeat(item.size)}</span></div>
+        <Art item={item} />
+        <strong>{item.name}</strong>
+        {item.nameKo && <span className="card-english">{item.nameEn}</span>}
+      </button>
+      <div className="card-controls">
+        {onAdd && <button aria-label={`${item.name} 보드에 추가`} onClick={onAdd}><Plus size={12} /> 추가</button>}
+        {onRemove && <button aria-label={`${item.name} 보드에서 제거`} onClick={onRemove}><Trash2 size={12} /> 제거</button>}
       </div>
-      <Art item={item} />
-      <strong>{item.name}</strong>
-      {item.legacy ? (
-        <span className="item-notice">기존 샘플</span>
-      ) : item.translationStatus === "untranslated" ? (
-        <span className="item-notice">미번역</span>
-      ) : null}
-      {item.local && (
-        <span className="item-notice">
-          {item.local.activity === "uncertain"
-            ? "활성 불확실"
-            : "파일의 활성 표시"}
-          {Object.values(item.local.unresolvedByTier).some(
-            (tokens) => tokens?.length,
-          )
-            ? " · 미해석"
-            : ""}
-        </span>
-      )}
-      {item.local?.chronicleIgnored && <span className="item-notice">Chronicle 제외/숨김 표시</span>}
-      <span className="item-tags">{item.tags.join(" · ")}</span>
-      {placed && placed.enchant !== "없음" && (
-        <span className="enchant-label">✦ {placed.enchant}</span>
-      )}
-    </button>
+    </div>
   );
 }
+
 function Slot({ index }: { index: number }) {
   const { setNodeRef, isOver } = useDroppable({ id: `slot:${index}` });
   return (
@@ -226,8 +200,8 @@ function MiniBoard({ deck }: { deck: Deck }) {
             gridColumn: `${p.start + 1} / span ${getPlacedItem(p).size}`,
           }}
         >
-          <Art item={getPlacedItem(p)} />
-          <span>{getPlacedItem(p).name}</span>
+          <Art item={displayItem(getPlacedItem(p))} />
+          <span>{displayItem(getPlacedItem(p)).name}</span>
         </div>
       ))}
     </div>
@@ -248,6 +222,7 @@ function loadSavedDecks() {
 }
 function App() {
   const [loaded] = useState(loadSavedDecks);
+  const [, setDetailsRevision] = useState(0);
   const [catalogRevision, setCatalogRevision] = useState(0);
   function onLocalLibrary(library: LocalLibrary | null) {
     setLocalCatalog(
@@ -278,6 +253,7 @@ function App() {
   }, [catalogRevision]);
   const [query, setQuery] = useState("");
   const [size, setSize] = useState(0);
+  const ignoreClickUntil = useRef(0);
   const [selection, setSelection] = useState<{
     itemId: string;
     placedId?: string;
@@ -373,6 +349,7 @@ function App() {
     setSelection(null);
   }
   function end(e: DragEndEvent) {
+    ignoreClickUntil.current = Date.now() + 250;
     setDrag(null);
     if (!e.over) return;
     const { itemId, placedId } = e.active.data.current as {
@@ -433,7 +410,7 @@ function App() {
   }
   // Chronicle data has explicit image identity metadata. Keep older raw catalogs
   // and bundled catalogs compatible; this visibility filter never mutates decks.
-  const visibleItems = items.filter(i => showMissingImages || !i.local?.metadataOnly ||
+  const visibleItems = items.map(displayItem).filter(i => showMissingImages || !i.local?.metadataOnly ||
     Boolean(i.image.path) || imageSources.get(i.id) === i.source.id);
   const filtered = visibleItems.filter(
     (i) =>
@@ -445,21 +422,18 @@ function App() {
   );
   const used = deck.items.reduce((n, p) => n + getPlacedItem(p).size, 0);
   const placed = deck.items.find((p) => p.id === selection?.placedId);
-  const selected = placed
+  const selectedBase = placed
     ? getPlacedItem(placed)
     : selection
       ? getItem(selection.itemId)
       : null;
-  const [previewTier, setPreviewTier] = useState("브론즈");
-  const selectedTier =
-    placed?.tier ||
-    (selected && availableTiers(selected).includes(previewTier)
-      ? previewTier
-      : selected
-        ? availableTiers(selected)[0]
-        : undefined);
-  const effect =
-    selected && selectedTier ? effectFor(selected, selectedTier) : undefined;
+  const selected = selectedBase ? displayItem(selectedBase) : null;
+  function openItem(item: Item, placedId?: string) {
+    if (Date.now() < ignoreClickUntil.current) return;
+    const url = getBazaardexUrl(item);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+    else setSelection({itemId: item.id, placedId});
+  }
   return (
     <>
       <header>
@@ -524,13 +498,16 @@ function App() {
         onLibraryChange={onLocalLibrary}
         onMessage={setMessage}
       />
+      <div className="item-details-toolbar">
+        <LocalItemDetailsPanel items={items} onChange={() => setDetailsRevision(n => n + 1)} onMessage={setMessage} />
+      </div>
       <DndContext
         sensors={sensors}
         collisionDetection={(args) =>
           args.pointerCoordinates ? pointerWithin(args) : rectIntersection(args)
         }
-        onDragStart={(e) => setDrag(e.active.data.current?.item)}
-        onDragCancel={() => setDrag(null)}
+        onDragStart={(e) => { ignoreClickUntil.current = Infinity; setDrag(e.active.data.current?.item); }}
+        onDragCancel={() => { ignoreClickUntil.current = Date.now() + 250; setDrag(null); }}
         onDragEnd={end}
       >
         <main>
@@ -609,7 +586,8 @@ function App() {
                   <Card
                     key={i.id}
                     item={i}
-                    onSelect={() => setSelection({ itemId: i.id })}
+                    onSelect={() => openItem(i)}
+                    onAdd={() => add(i.id)}
                   />
                 ))}
             </div>
@@ -733,11 +711,10 @@ function App() {
                         }}
                       >
                         <Card
-                          item={getPlacedItem(p)}
+                          item={displayItem(getPlacedItem(p))}
                           placed={p}
-                          onSelect={() =>
-                            setSelection({ itemId: p.itemId, placedId: p.id })
-                          }
+                          onSelect={() => openItem(displayItem(getPlacedItem(p)), p.id)}
+                          onRemove={() => remove(p.id)}
                         />
                       </div>
                     ))}
@@ -836,7 +813,7 @@ function App() {
                           {d.items
                             .map(
                               (p) =>
-                                `${getPlacedItem(p).name} (${p.tier} / ${p.enchant})`,
+                                displayItem(getPlacedItem(p)).name,
                             )
                             .join(" · ") || "빈 덱"}
                         </small>
@@ -865,7 +842,7 @@ function App() {
               <span>
                 {data.status === "ready"
                   ? data.version.startsWith("local:")
-                    ? "개인 파일 · 패치 미확인"
+                    ? "개인 도감"
                     : `데이터 패치 ${data.patchVersion || "미확인"}`
                   : "실제 데이터 미연결 · 기존 덱 보존"}
               </span>
@@ -905,197 +882,18 @@ function App() {
             >
               <X size={19} />
             </button>
-            <div className="eyebrow">
-              {selected.legacy
-                ? "LEGACY SAMPLE"
-                : selected.translationStatus === "untranslated"
-                  ? "UNTRANSLATED"
-                  : "ITEM"}{" "}
-              / {selected.source.patchVersion}
-            </div>
             <Art item={selected} />
             <h2>{selected.name}</h2>
-            <div className="detail-tags">
-              {selected.tags.join(" · ")} · {selected.size}칸
-            </div>
-            <div className="item-effects">
-              {effect ? (
-                <>
-                  <strong>{selectedTier} 효과</strong>
-                  {effect.effects.map((line, i) => (
-                    <p key={i}>{line}</p>
-                  ))}
-                  {effect.stats && (
-                    <dl>
-                      {Object.entries(effect.stats).map(([key, value]) => (
-                        <React.Fragment key={key}>
-                          <dt>{key}</dt>
-                          <dd>{value}</dd>
-                        </React.Fragment>
-                      ))}
-                    </dl>
-                  )}
-                </>
-              ) : (
-                <p>
-                  {selected.legacy
-                    ? "기존 샘플 아이템입니다. 실제 게임의 이름·효과·수치로 사용하지 않습니다."
-                    : "이 등급의 효과 정보는 확인되지 않았습니다."}
-                </p>
-              )}
-            </div>
-            {!placed && !selected.legacy && (
-              <label>
-                아이템 등급
-                <select
-                  aria-label="효과 미리보기 등급"
-                  value={selectedTier}
-                  onChange={(e) => setPreviewTier(e.target.value)}
-                >
-                  {availableTiers(selected).map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {selected.nameEn !== selected.name && (
-              <p className="english-name">{selected.nameEn}</p>
-            )}
-            {selected.local && <p>고유 ID: {selected.source.id}</p>}
-            {selected.local && !selected.source.url.startsWith("https://") && <p>검증된 외부 아이템 상세 링크가 없습니다.</p>}
-            {!selected.legacy && selected.source.url.startsWith("https://") && (
-              <a
-                className="source-link"
-                href={selected.source.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                데이터 출처 ↗
-              </a>
-            )}
-            {selected.local && (
-              <div className="local-item-info">
-                <strong>
-                  {selected.local.activity === "uncertain"
-                    ? "활성 여부 불확실"
-                    : "파일에 활성으로 표시됨 · 별도 검증 안 됨"}
-                </strong>
-                <p>
-                  개인 파일에서 변환한 항목입니다. 패치와 현재 게임에서의 사용
-                  가능 여부는 확인되지 않았습니다.
-                </p>
-                <details>
-                  <summary>능력 참조·미해석·변환 안내</summary>
-                  <p>
-                    미해석:{" "}
-                    {(
-                      selected.local.unresolvedByTier[
-                        tierKeys[tiers.indexOf(selectedTier || "")]
-                      ] || []
-                    ).join(", ") ||
-                      "자리표시자 미해석 없음 (효과 전체 검증을 뜻하지 않음)"}
-                  </p>
-                  <p>
-                    능력 ID:{" "}
-                    {(
-                      selected.local.abilityRefsByTier[
-                        tierKeys[tiers.indexOf(selectedTier || "")]
-                      ]?.abilityIds || []
-                    ).join(", ") || "없음/미지정"}
-                  </p>
-                  <p>
-                    지속 효과 ID:{" "}
-                    {(
-                      selected.local.abilityRefsByTier[
-                        tierKeys[tiers.indexOf(selectedTier || "")]
-                      ]?.auraIds || []
-                    ).join(", ") || "없음/미지정"}
-                  </p>
-                  <ul>
-                    {selected.local.warnings.map((warning, i) => (
-                      <li key={i}>{warning}</li>
-                    ))}
-                  </ul>
-                </details>
-              </div>
-            )}
-            <small className="muted">
-              {selected.legacy
-                ? "이전 버전 덱 호환용으로만 보존됩니다."
-                : `기준 패치 ${selected.source.patchVersion} · ${selected.translationStatus === "official" ? "공식 한국어 명칭" : "미번역 · 영어 원문 유지"}`}
-            </small>
+            {selected.nameKo && <p className="english-name">{selected.nameEn}</p>}
+            <p className="detail-tags">{selected.size}칸</p>
+            <button className="source-link full" disabled={!getBazaardexUrl(selected)}
+              onClick={() => { const url = getBazaardexUrl(selected); if (url) window.open(url, "_blank", "noopener,noreferrer"); }}>
+              Bazaardex에서 보기 ↗
+            </button>
             {placed ? (
-              <>
-                <label>
-                  아이템 등급
-                  <select
-                    aria-label="아이템 등급"
-                    value={placed.tier}
-                    onChange={(e) =>
-                      update((d) => ({
-                        ...d,
-                        items: d.items.map((p) =>
-                          p.id === placed.id
-                            ? { ...p, tier: e.target.value }
-                            : p,
-                        ),
-                      }))
-                    }
-                  >
-                    {(selected.legacy
-                      ? tiers
-                      : [
-                          ...new Set([
-                            ...availableTiers(selected),
-                            ...(placed ? [placed.tier] : []),
-                          ]),
-                        ]
-                    ).map((t) => (
-                      <option key={t}>{t}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  마법부여 (덱 메모)
-                  <select
-                    aria-label="마법부여"
-                    value={placed.enchant}
-                    onChange={(e) =>
-                      update((d) => ({
-                        ...d,
-                        items: d.items.map((p) =>
-                          p.id === placed.id
-                            ? { ...p, enchant: e.target.value }
-                            : p,
-                        ),
-                      }))
-                    }
-                  >
-                    {enchants.map((t) => (
-                      <option key={t}>{t}</option>
-                    ))}
-                  </select>
-                </label>
-                <small className="muted">
-                  마법부여는 덱 메모이며 효과 수치를 계산하지 않습니다.
-                </small>
-                <button
-                  className="danger full"
-                  onClick={() => remove(placed.id)}
-                >
-                  <Trash2 size={15} /> 보드에서 제거
-                </button>
-              </>
+              <button className="danger full" onClick={() => remove(placed.id)}><Trash2 size={15} /> 보드에서 제거</button>
             ) : (
-              <button
-                className="primary full"
-                onClick={() => {
-                  add(selected.id, undefined, undefined, selectedTier);
-                  setSelection(null);
-                }}
-              >
-                <Plus size={16} /> 빈 공간에 추가
-              </button>
+              <button className="primary full" onClick={() => { add(selected.id); setSelection(null); }}><Plus size={16} /> 빈 공간에 추가</button>
             )}
           </section>
         </div>
@@ -1122,8 +920,8 @@ function App() {
             <p>1. 영웅을 고르고 이름이나 태그로 아이템을 찾으세요.</p>
             <p>
               2. 아이템을 10칸 보드에 드래그하세요. 휴대폰에서는 0.25초 이상
-              길게 누른 후 이동하세요. 클릭 후 추가도 가능합니다. 보드의
-              아이템을 클릭하면 등급·마법부여를 변경하거나 제거할 수 있습니다.
+              길게 누른 후 이동하세요. 카드 아래 추가·제거 버튼도 사용할 수 있습니다.
+              아이템을 클릭하면 확인된 Bazaardex 상세 페이지가 새 탭에서 열립니다.
             </p>
             <p>
               3. 보드 아이템을 빈 칸으로 드래그해 이동하세요. 겹침과 범위 초과는

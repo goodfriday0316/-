@@ -135,8 +135,7 @@ test("small/medium/large occupy exact physical 1/2/3 cells; full board rejects o
     page.getByTestId("slot-9"),
   );
   expect((await saved(page)).decks[0].items).toHaveLength(5);
-  await card(page, "진주 조개").click();
-  await page.getByRole("button", { name: "빈 공간에 추가" }).click();
+  await page.getByRole("button", { name: "진주 조개 보드에 추가", exact: true }).click();
   await expect(page.locator(".toast")).toContainText("놓을 수 없습니다");
   expect((await saved(page)).decks[0].items).toHaveLength(5);
   await mouseDrag(
@@ -157,10 +156,15 @@ test("actual downloaded JSON imports into a fresh browser and survives reload; 3
   await page.getByRole("button", { name: "빈 공간에 추가" }).click();
   await page.getByRole("button", { name: "덱 복제", exact: true }).click();
   await page.getByLabel("덱 이름", { exact: true }).fill("화염 항해");
-  await card(page, "선장의 나침반", true).click();
-  await page.getByLabel("마법부여", { exact: true }).selectOption("화염");
-  await page.getByLabel("아이템 등급", { exact: true }).selectOption("골드");
-  await page.getByRole("button", { name: "툴팁 닫기" }).click();
+  // Import a pre-existing deck carrying nondefault hidden compatibility data.
+  const previous = await saved(page);
+  previous.decks[1].items[0].tier = "골드";
+  previous.decks[1].items[0].enchant = "화염";
+  await page.getByTestId("deck-import").setInputFiles({
+    name: "existing-grades.json", mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(previous)),
+  });
+  await expect.poll(async () => (await saved(page)).decks[1].items[0].tier).toBe("골드");
   await page.getByRole("button", { name: "덱 복제", exact: true }).click();
   await page.getByLabel("덱 이름", { exact: true }).fill("수정 항해");
   await page.getByLabel("영웅 선택").selectOption("중립");
@@ -417,37 +421,28 @@ test.describe("mobile horizontal board access", () => {
   });
 });
 
-test("catalog searches English, renders source image, and previews tier-specific source effects", async ({
-  page,
-}) => {
+test("catalog searches English, renders source image, and hides internal grade/effect data", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("아이템 검색").fill("Test compass");
   await expect(page.locator(".item-grid .item-card")).toHaveCount(1);
-  await expect(page.locator(".item-grid img")).toHaveAttribute(
-    "src",
-    "/images/items/test-only.png",
-  );
-  await expect
-    .poll(() =>
-      page
-        .locator(".item-grid img")
-        .evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
-    )
-    .toBe(true);
-  await page
-    .getByRole("button", { name: "선장의 나침반", exact: true })
-    .click();
-  await page.getByLabel("효과 미리보기 등급").selectOption("다이아몬드");
-  await expect(page.getByRole("dialog")).toContainText(
-    "TEST ONLY diamond effect 4",
-  );
+  await expect(page.locator(".item-grid img")).toHaveAttribute("src", "/images/items/test-only.png");
+  await expect.poll(() => page.locator(".item-grid img").evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+  await page.getByRole("button", { name: "선장의 나침반", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "아이템 툴팁" });
+  await expect(dialog).toContainText("Test compass");
+  await expect(dialog.locator(".item-effects")).toHaveCount(0);
+  await expect(dialog.getByLabel("효과 미리보기 등급")).toHaveCount(0);
+  await expect(dialog).not.toContainText("TEST ONLY");
+  await expect(dialog.getByRole("button", { name: "Bazaardex에서 보기" })).toBeDisabled();
   await page.getByRole("button", { name: "빈 공간에 추가" }).click();
-  expect((await saved(page)).decks[0].items[0].tier).toBe("다이아몬드");
-  await page
-    .getByRole("button", { name: "선장의 나침반 보드 아이템", exact: true })
-    .click();
-  await page.getByLabel("아이템 등급", { exact: true }).selectOption("실버");
-  await expect(page.getByRole("dialog")).toContainText(
-    "TEST ONLY silver effect 2",
-  );
+  const original = await saved(page);
+  original.decks[0].items[0].tier = "다이아몬드";
+  original.decks[0].items[0].enchant = "얼음";
+  await page.getByTestId("deck-import").setInputFiles({name:"old-deck.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(original))});
+  await page.reload();
+  await page.getByRole("button", { name: "선장의 나침반 보드 아이템", exact: true }).click();
+  await expect(dialog.getByLabel("아이템 등급", { exact: true })).toHaveCount(0);
+  await expect(dialog).not.toContainText("다이아몬드");
+  await expect(page.locator(".board")).not.toContainText("다이아몬드");
+  expect((await saved(page)).decks[0].items[0]).toEqual(original.decks[0].items[0]);
 });
