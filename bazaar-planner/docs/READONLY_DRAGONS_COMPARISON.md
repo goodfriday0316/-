@@ -33,7 +33,7 @@ python .\compare_dragons.py --game .\GameData.db.zip --chronicle .\templates.sql
 
 ## 원본 보존과 판단 한계
 
-SQLite는 읽기 전용·immutable 모드로 열고 무결성을 확인합니다. 유효한 WAL이 남아 있는 파일은 잘못된 스냅샷을 읽지 않도록 거부합니다. 프로그램에서 Chronicle/게임을 종료하고 정상 저장된 DB의 복사본을 사용하세요. ZIP 안 DB는 안전한 임시 폴더 한 파일로만 읽고 작업 후 임시 사본을 정리합니다. 원본 DB/ZIP의 SHA-256을 처리 전후 비교합니다.
+SQLite는 읽기 전용·immutable 모드로 열고 무결성을 확인합니다. 유효한 WAL이 남아 있는 파일은 잘못된 스냅샷을 읽지 않도록 거부합니다. Chronicle/게임을 직접 종료한 후 정상 저장된 DB의 복사본을 사용하세요. ZIP 안 DB는 안전한 임시 폴더 한 파일로만 읽고 작업 후 임시 사본을 정리합니다. 원본 DB/ZIP의 SHA-256을 처리 전후 비교합니다.
 
 ZIP의 파일 날짜와 카드의 Version 값은 `sourceMetadata`에 기록하지만 게임 패치·출시 시점을 확정하는 근거로 사용하지 않습니다. 설치 폴더의 기본 GameData.db.zip과 현재 게임이 다운로드한 최신 캐시가 다를 수 있습니다. 한 파일에서 드래곤즈가 없다는 결과가 현재 게임 전체에 드래곤즈가 없다는 뜻은 아닙니다.
 
