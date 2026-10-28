@@ -114,3 +114,14 @@ test("mobile layout", async ({ page }) => {
   ).toBeVisible();
   await page.screenshot({ path: "test-results/mobile.png", fullPage: true });
 });
+
+test('desktop catalog is 555px with room for the board; mobile keeps stacked layout', async ({page}) => {
+  for(const width of [1920,1440,1280]) {
+    await page.setViewportSize({width,height:1100}); await page.goto('/');
+    const sizes=await page.evaluate(()=>({catalog:document.querySelector('.catalog')!.getBoundingClientRect().width,workspace:document.querySelector('.workspace')!.getBoundingClientRect().width,board:document.querySelector('.board')!.getBoundingClientRect().width,art:document.querySelector('.catalog .art')!.getBoundingClientRect().height}));
+    expect(sizes.catalog).toBe(555);expect(sizes.workspace).toBeGreaterThanOrEqual(880);expect(sizes.board).toBeGreaterThan(750);expect(sizes.art).toBe(150);
+  }
+  await page.setViewportSize({width:390,height:844});await page.goto('/');
+  const mobile=await page.evaluate(()=>({catalog:document.querySelector('.catalog')!.getBoundingClientRect(),workspace:document.querySelector('.workspace')!.getBoundingClientRect(),width:document.documentElement.scrollWidth,viewport:innerWidth}));
+  expect(mobile.catalog.width).toBeLessThanOrEqual(390);expect(mobile.workspace.y).toBeLessThan(mobile.catalog.y);expect(mobile.width).toBeLessThanOrEqual(mobile.viewport);
+});

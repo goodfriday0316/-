@@ -354,7 +354,13 @@ test("keyboard sensor moves to a neighboring slot", async ({ page }) => {
   const placed = card(page, "선장의 나침반", true);
   await placed.focus();
   await page.keyboard.press("Space");
-  for (let n = 0; n < 4; n++) await page.keyboard.press("ArrowRight");
+  // KeyboardSensor moves in pixels; stop on the neighboring cell rather than
+  // assuming a fixed number of presses for every responsive board width.
+  for (let n = 0; n < 10; n++) {
+    await page.keyboard.press("ArrowRight");
+    if ((await page.getByTestId("slot-1").getAttribute("class"))?.includes("over")) break;
+  }
+  await expect(page.getByTestId("slot-1")).toHaveClass(/over/);
   await page.keyboard.press("Space");
   await expect
     .poll(async () => (await saved(page)).decks[0].items[0].start)

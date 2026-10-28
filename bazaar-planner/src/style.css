@@ -1446,3 +1446,26 @@ footer > span:first-child {
 }
 .image-visibility-filter { display: flex; align-items: center; gap: 7px; font-size: 11px; margin: 12px 19px 4px; cursor: pointer; }
 .image-filter-help { font-size: 10px; color: #8fa283; margin: 0 19px 8px; }
+
+/* A wider desktop catalog gets its space from the page, not the ten-slot board. */
+@media (min-width: 1151px) {
+  main,
+  .page-title,
+  .data-status,
+  .bottom-note {
+    width: calc(100% - 48px);
+    min-width: 1457px; /* 555 catalog + 22 gap + at least 880 workspace */
+    max-width: 1635px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .page-title { padding-left: 0; padding-right: 0; }
+  main { grid-template-columns: 555px minmax(880px, 1fr); }
+  .catalog .art { height: 150px; }
+  .catalog .item-card strong {
+    font-size: 13px;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
